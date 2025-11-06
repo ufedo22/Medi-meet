@@ -1,40 +1,31 @@
-// middleware.js
-import { withClerkMiddleware, getAuth } from "@clerk/nextjs/edge";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-// List of protected routes
-const protectedRoutes = [
-  "/doctors",
-  "/onboarding",
-  "/doctor",
-  "/admin",
-  "/video-call",
-  "/appointments",
-];
+const isProtectedRoute = createRouteMatcher([
+  "/doctors(.*)",
+  "/onboarding(.*)",
+  "/doctor(.*)",
+  "/admin(.*)",
+  "/video-call(.*)",
+  "/appointments(.*)",
+]);
 
-// Helper to check if route is protected
-const isProtectedRoute = (pathname) => {
-  return protectedRoutes.some((path) => pathname.startsWith(path));
-};
+export default clerkMiddleware(async (auth, req) => {
+  const { userId } = await auth();
 
-// Edge-safe Clerk middleware
-export default withClerkMiddleware((req) => {
-  const { userId } = getAuth(req); // Edge-compatible auth
-
-  const url = req.nextUrl.clone();
-
-  if (!userId && isProtectedRoute(url.pathname)) {
-    url.pathname = "/sign-in"; // redirect unauthenticated users
-    return NextResponse.redirect(url);
+  if (!userId && isProtectedRoute(req)) {
+    const { redirectToSignIn } = await auth();
+    return redirectToSignIn();
   }
 
   return NextResponse.next();
 });
 
-// Apply middleware to all routes except static files and _next internals
 export const config = {
   matcher: [
+    // Skip Next.js internals and all static files, unless found in search params
     "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    // Always run for API routes
     "/(api|trpc)(.*)",
   ],
 };
