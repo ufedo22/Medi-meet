@@ -1,4 +1,4 @@
-import { withClerkMiddleware, getAuth } from "@clerk/nextjs/dist/edge";
+import { withClerkMiddleware, getAuth } from "@clerk/nextjs/edge";
 import { NextResponse } from "next/server";
 
 const isProtectedRoute = (pathname) => {
@@ -14,12 +14,12 @@ const isProtectedRoute = (pathname) => {
 };
 
 export default withClerkMiddleware((req) => {
-  const { userId } = getAuth(req);
+  const { userId } = getAuth(req); // Edge-safe
 
   const url = req.nextUrl.clone();
 
   if (!userId && isProtectedRoute(url.pathname)) {
-    url.pathname = "/sign-in";
+    url.pathname = "/sign-in"; // redirect to Clerk sign-in
     return NextResponse.redirect(url);
   }
 
